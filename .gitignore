@@ -11,3 +11,8 @@ models/*.joblib
 models/*.pkl
 
 .DS_Store
+
+mlflow.db
+**/mlflow.db
+mlruns/
+**/mlruns/
