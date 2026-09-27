@@ -32,6 +32,25 @@ The goal is to build a regression model capable of predicting the `SalePrice` of
 * Joblib
 * Docker
 
+## Run the prediction app
+
+From the project root, with your virtual environment activated:
+
+```bash
+pip install -r requirements.txt
+streamlit run dashboard/app.py
+```
+
+The app loads `models/final_model.joblib` without retraining. This artifact is
+ignored by Git, so it must be present locally. Keep `assets/` and
+`data/raw/data_description.txt` available for the interface and field help.
+
+Enter the main property details and review the prefilled additional fields, then
+select **Estimate sale price**. The app calculates engineered features using
+`src/feature_engineering.py` and matches the saved pipeline's input columns.
+The current model uses Ames housing data, square feet, and US dollars; it does
+not provide a current Moroccan market valuation.
+
 ## Project Structure
 
 ```text
