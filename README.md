@@ -12,12 +12,24 @@ Buyers, sellers, and real estate professionals need a starting point for estimat
 
 The local file, `data/raw/House_Prices.csv`, contains 2,919 rows and 81 columns. The training workflow uses the first 1,460 labeled rows, then removes two outliers, leaving 1,458 houses. `data/raw/data_description.txt` explains the variables and category codes.
 
+## Architecture
+
+![Aqari architecture: data preparation, feature engineering, model evaluation, saved pipeline, Streamlit, and Docker](diagrams/architecture%20diagram.png)
+
+The diagram illustrates the overall workflow. The actual dataset is
+`data/raw/House_Prices.csv`, and the repository contains notebooks 01–11.
+There is no separate feature-selection step, `src/utils.py`, or Docker Compose
+file. Deployment uses a single Dockerfile. The saved artifact includes both
+preprocessing and Gradient Boosting; Streamlit calculates the engineered inputs
+and displays the predicted price without retraining.
+
 ## Project structure
 
 ```text
 aqari/
 ├── assets/logo.png
 ├── dashboard/app.py                 # Streamlit interface
+├── diagrams/                        # Architecture illustration
 ├── data/raw/                        # House_Prices.csv and field descriptions
 ├── models/final_model.joblib         # Saved pipeline; ignored by Git
 ├── notebooks/                       # Exploration through interpretation (01–11)
@@ -139,7 +151,71 @@ print(loaded_model.predict(X_test.iloc[[0]]))
 
 The loaded pipeline can predict without retraining. Cleaning and feature engineering are separate functions in `src/`; the saved pipeline includes imputation, scaling, categorical encoding, and the trained regressor.
 
-## Install and run locally
+## Installation and running the project (Docker)
+
+Docker is the main way to run Aqari. Install Docker and make sure its engine is
+running. You do not need to install Python dependencies on your computer or
+activate `.venv`; the image installs them during the build.
+
+From the project root, ensure `models/final_model.joblib` is present. Git ignores
+this file, so a fresh clone needs a copy of the saved model before building.
+Then run:
+
+```bash
+# Build the image.
+docker build -t aqari .
+
+# Start the container.
+docker run --rm -d --name aqari -p 8501:8501 aqari
+```
+
+Open **http://localhost:8501**, enter the property details, and click
+**Estimate sale price**. Stop any locally running Streamlit instance first if
+it already uses port 8501.
+
+To inspect container logs:
+
+```bash
+docker logs aqari
+```
+
+To stop and automatically remove the container:
+
+```bash
+docker stop aqari
+```
+
+The image uses Python 3.14 slim, installs `requirements.txt` with model-library version pins, and includes the saved model, `src/`, app, and logo. `.dockerignore` excludes local environments, training data, notebooks, and MLflow artifacts. No Docker Compose setup is needed.
+
+To start it again, repeat the `docker run` command. If you change the app,
+dependencies, or saved model, rebuild the image and recreate the container.
+
+The container serves predictions only. It does not run training notebooks or
+an MLflow tracking UI. Neither is required to use the saved model in Streamlit.
+
+The app loads the model once, creates a one-row DataFrame, calculates engineered features, orders columns using `model.feature_names_in_`, and calls `model.predict(input_df)[0]`. It does not train a model. Unlisted inputs use fitted numeric medians and categorical modes, and the sale year is fixed at 2010.
+
+### Example prediction
+
+Keeping the app's initial selections and values gives this example:
+
+| Input | Value |
+| --- | --- |
+| Neighborhood / type | Bloomington Heights / Detached house |
+| Land area | 8,000 sq ft |
+| Ground / upper-floor area | 1,000 / 500 sq ft |
+| Bedrooms / full bathrooms / extra toilets | 3 / 2 / 1 |
+| Garage capacity / quality | 2 cars / 5 out of 10 |
+| Construction / renovation year | 2000 / 2000 |
+
+With the current saved model and defaults for other fields, clicking **Estimate sale price** displays approximately **$163,628**. This is an illustrative historical estimate, not a current appraisal.
+
+
+## Optional local development: notebooks and MLflow
+
+Skip this section if you only want to run the app with Docker. These local
+commands are for exploring data, retraining the model, or inspecting experiments
+outside the container.
 
 Use Python 3.14, matching the Docker environment. From the project root:
 
@@ -148,14 +224,11 @@ python3.14 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt scikit-learn==1.9.1 joblib==1.6.0 numpy==2.5.3 pandas==3.0.6
 pip install -e . --no-deps
-streamlit run dashboard/app.py
 ```
 
-Open **http://localhost:8501**. Stop the local app with **Ctrl+C**. The version pins match the saved model environment; the editable install makes `src` importable from notebooks.
+The version pins match the saved model environment; the editable install makes `src` importable from notebooks.
 
 Ensure `models/final_model.joblib` is present: Git ignores it, so a fresh clone needs a copy of the artifact or a run of the final evaluation notebook. The training notebooks currently contain a machine-specific MLflow SQLite path that must be adapted when rerunning elsewhere.
-
-The app loads the model once, creates a one-row DataFrame, calculates engineered features, orders columns using `model.feature_names_in_`, and calls `model.predict(input_df)[0]`. It does not train a model. Unlisted inputs use fitted numeric medians and categorical modes, and the sale year is fixed at 2010.
 
 ### Run the notebooks
 
@@ -201,41 +274,6 @@ experiment records: `mlflow.db` and local run artifacts are ignored by Git.
 Stop MLflow with **Ctrl+C**. The notebooks log directly to SQLite, so the UI
 does not need to be running during training. Streamlit also works independently
 of MLflow; the Docker container runs only Streamlit.
-
-### Example prediction
-
-Keeping the app's initial selections and values gives this example:
-
-| Input | Value |
-| --- | --- |
-| Neighborhood / type | Bloomington Heights / Detached house |
-| Land area | 8,000 sq ft |
-| Ground / upper-floor area | 1,000 / 500 sq ft |
-| Bedrooms / full bathrooms / extra toilets | 3 / 2 / 1 |
-| Garage capacity / quality | 2 cars / 5 out of 10 |
-| Construction / renovation year | 2000 / 2000 |
-
-With the current saved model and defaults for other fields, clicking **Estimate sale price** displays approximately **$163,628**. This is an illustrative historical estimate, not a current appraisal.
-
-## Run with Docker
-
-Ensure the saved model exists locally before building. From the project root:
-
-```bash
-# Build the image.
-docker build -t aqari .
-
-# Start the container.
-docker run --rm -d --name aqari -p 8501:8501 aqari
-```
-
-Open **http://localhost:8501**. To stop and automatically remove the container:
-
-```bash
-docker stop aqari
-```
-
-The image uses Python 3.14 slim, installs `requirements.txt` with model-library version pins, and includes the saved model, `src/`, app, and logo. `.dockerignore` excludes local environments, training data, notebooks, and MLflow artifacts. No Docker Compose setup is needed.
 
 ## Screenshots and branding
 
