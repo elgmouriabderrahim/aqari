@@ -1,0 +1,17 @@
+.git
+.venv
+.agents
+.codex
+**/__pycache__
+**/*.pyc
+*.egg-info
+**/.ipynb_checkpoints
+.env
+.env.*
+notebooks
+data
+**/mlflow.db
+**/mlruns
+.DS_Store
+
+# Keep models/final_model.joblib, src/, dashboard/, and assets/ in the image.

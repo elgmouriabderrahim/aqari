@@ -51,6 +51,35 @@ select **Estimate sale price**. The app calculates engineered features using
 The current model uses Ames housing data, square feet, and US dollars; it does
 not provide a current Moroccan market valuation.
 
+## Run with Docker
+
+Make sure `models/final_model.joblib` exists locally before building. It is
+included in the Docker image even though Git ignores it. No model is retrained.
+
+From the project root, build the image:
+
+```bash
+docker build -t aqari .
+```
+
+Start the container:
+
+```bash
+docker run --rm -d --name aqari -p 8501:8501 aqari
+```
+
+Open <http://localhost:8501> in your browser.
+
+Stop the container:
+
+```bash
+docker stop aqari
+```
+
+The container is removed automatically when stopped; the image remains available.
+The Dockerfile uses Python 3.14 and pins the model-related libraries to the
+versions used by the saved pipeline. Other dependencies come from `requirements.txt`.
+
 ## Project Structure
 
 ```text
