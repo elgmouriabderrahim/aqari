@@ -111,9 +111,9 @@ def build_input(values, defaults, expected_columns):
 
 st.set_page_config(
     page_title="Aqari · House Price Estimate",
-    page_icon="🏠",
+    page_icon=LOGO_PATH,
     layout="centered"
-)
+) 
 
 
 st.markdown(
